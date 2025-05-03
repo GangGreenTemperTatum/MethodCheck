@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "lib": ["DOM", "ESNext"],
+    "jsx": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "caido:plugin": ["../../node_modules/@caido/sdk-frontend/src/index.d.ts"]
+    }
+  },
+  "include": ["./src/**/*.ts", "./src/**/*.vue"]
+}

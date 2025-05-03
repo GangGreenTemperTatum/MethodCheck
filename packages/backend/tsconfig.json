@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "types": [],
+    "typeRoots": ["../../node_modules/@types"],
+    "paths": {
+      "caido:plugin": ["./node_modules/@caido/sdk-backend/src/index.d.ts"]
+    }
+  },
+  "include": ["./src/**/*.ts"]
+}
