@@ -21,11 +21,11 @@ importers:
         specifier: 1.51.0
         version: 1.51.0(postcss@8.5.3)
       tailwindcss:
-        specifier: 3.4.13
-        version: 3.4.13
+        specifier: 4.1.5
+        version: 4.1.5
       tailwindcss-primeui:
         specifier: 0.3.4
-        version: 0.3.4(tailwindcss@3.4.13)
+        version: 0.3.4(tailwindcss@4.1.5)
       typescript:
         specifier: 5.5.4
         version: 5.5.4
@@ -1315,6 +1315,9 @@ packages:
     resolution: {integrity: sha512-KqjHOJKogOUt5Bs752ykCeiwvi0fKVkr5oqsFNt/8px/tA8scFPIlkygsf6jXrfCqGHz7VflA6+yytWuM+XhFw==}
     engines: {node: '>=14.0.0'}
     hasBin: true
+
+  tailwindcss@4.1.5:
+    resolution: {integrity: sha512-nYtSPfWGDiWgCkwQG/m+aX83XCwf62sBgg3bIlNiiOcggnS1x3uVRDAuyelBFL+vJdOPPCGElxv9DjHJjRHiVA==}
 
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
@@ -2694,9 +2697,9 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  tailwindcss-primeui@0.3.4(tailwindcss@3.4.13):
+  tailwindcss-primeui@0.3.4(tailwindcss@4.1.5):
     dependencies:
-      tailwindcss: 3.4.13
+      tailwindcss: 4.1.5
 
   tailwindcss@3.4.13:
     dependencies:
@@ -2724,6 +2727,8 @@ snapshots:
       sucrase: 3.35.0
     transitivePeerDependencies:
       - ts-node
+
+  tailwindcss@4.1.5: {}
 
   thenify-all@1.6.0:
     dependencies:
