@@ -1,5 +1,5 @@
 ---
-name: "Meta Sync labels"
+name: "Sync labels"
 on:
   workflow_dispatch:
   push:
