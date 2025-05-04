@@ -1,6 +1,6 @@
 import { defineConfig } from '@caido-community/dev';
 import vue from '@vitejs/plugin-vue';
-import tailwindcss from "tailwindcss";
+import tailwindcss from "@tailwindcss/postcss";
 // @ts-expect-error no declared types at this time
 import tailwindPrimeui from "tailwindcss-primeui";
 import tailwindCaido from "@caido/tailwindcss";
