@@ -10,22 +10,23 @@ _MethodCheck, dig deeper_in the Proxy_
 [![GitHub issues](https://img.shields.io/github/issues/GangGreenTemperTatum/MethodCheck)](https://github.com/GangGreenTemperTatum/MethodCheck/issues)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/GangGreenTemperTatum/MethodCheck)](https://github.com/GangGreenTemperTatum/MethodCheck/releases)
 [![GitHub stars](https://img.shields.io/github/stars/GangGreenTemperTatum/MethodCheck?style=social)](https://github.com/GangGreenTemperTatum/MethodCheck/stargazers)
-[![Caido Plugin Status](https://img.shields.io/badge/Caido%20Plugin-Not%20Yet%20Submitted-yellow)](https://caido.io/plugins) <!-- TODO -->
+[![Caido Plugin Status: submitted](https://img.shields.io/badge/Caido%20Plugin%20Status-submitted-1E90FF?style=flat)](https://github.com/caido/store/pull/24) <!-- TODO -->
 [![License](https://img.shields.io/github/license/GangGreenTemperTatum/MethodCheck?branch=main)](https://github.com/GangGreenTemperTatum/MethodCheck/blob/main/LICENSE)
 
 [Report Bug](https://github.com/GangGreenTemperTatum/MethodCheck/issues) •
 [Request Feature](https://github.com/GangGreenTemperTatum/MethodCheck/issues)
 
 <!-- TODO > MethodCheck is now available via the Caido Plugin Library! 🥳 -->
+MethodCheck has been [submitted to the Caido Plugin Library](https://github.com/caido/store/pull/24) and is currently under review. Once approved, it will be available for installation directly from the Caido interface. In the meantime, you can still install it manually by following the instructions below.
 
 </div>
 
 ---
 
-# ToC
+# Table of Contents
 
 - [MethodCheck](#methodcheck)
-- [ToC](#toc)
+- [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Example Usage](#example-usage)
     - [MethodCheck in Action](#methodcheck-in-action)
@@ -41,6 +42,8 @@ _MethodCheck, dig deeper_in the Proxy_
 ## Overview
 
 MethodCheck is a Caido extension written in TypeScript that automatically detects available HTTP methods for endpoints by sending `OPTIONS` requests. When additional methods are found beyond the one used in the original request, the plugin creates findings and adds metadata to help identify potential security issues.
+
+__This is a similar approach to one of my go to BAPPs, '[HTTP Methods Discloser](https://portswigger.net/bappstore/2d84c07f3a8d4e2b97828cd0aa814b07)' which is awesome and lightweight for recon and general fingerprinting.__
 
 When an HTTP request passes through Caido's proxy (not limited to in-scope), the plugin:
 
