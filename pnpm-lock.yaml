@@ -39,8 +39,8 @@ importers:
   packages/frontend:
     dependencies:
       '@caido/primevue':
-        specifier: 0.1.2
-        version: 0.1.2
+        specifier: 0.1.13
+        version: 0.1.13(primevue@4.3.3(vue@3.5.13(typescript@5.5.4)))
       primevue:
         specifier: 4.3.3
         version: 4.3.3(vue@3.5.13(typescript@5.5.4))
@@ -95,8 +95,10 @@ packages:
   '@caido/plugin-manifest@0.3.0':
     resolution: {integrity: sha512-HRGHf65K2sfSdaEUwkCNDlurJ4zL0bOUg/Db4u6CrwjTTzmg2gOzP6SzLRj+69gWmxOm5LUjhInNHaMIRmQkHw==}
 
-  '@caido/primevue@0.1.2':
-    resolution: {integrity: sha512-PCv6qyvlWEKB97PLRzPHDjs7ZGW5JQrD6jvJiMEiprfu4IR5/dXiqRJ4M5g293qn+RAffBuiXcna0vWSxrg5lQ==}
+  '@caido/primevue@0.1.13':
+    resolution: {integrity: sha512-Yl7q0aWredncapneCVINBGtp/xJ3CnPp1CDEiW1nsiN+v532WcAeSJc0QgzTB9oJj/NO0jVBvx5M+7em+HTYow==}
+    peerDependencies:
+      primevue: 4.1.0
 
   '@caido/quickjs-types@0.17.2':
     resolution: {integrity: sha512-5kcucGORMNEbcdU91yKLYZG/TFDqsO6XmCZ1TnU6V48E61mmqrJg6kjrfOFP1WOugDm+ZcGd/Su3p3XkFXfaPg==}
@@ -1540,7 +1542,9 @@ snapshots:
     dependencies:
       ajv: 8.17.1
 
-  '@caido/primevue@0.1.2': {}
+  '@caido/primevue@0.1.13(primevue@4.3.3(vue@3.5.13(typescript@5.5.4)))':
+    dependencies:
+      primevue: 4.3.3(vue@3.5.13(typescript@5.5.4))
 
   '@caido/quickjs-types@0.17.2': {}
 
