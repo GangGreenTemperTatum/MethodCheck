@@ -102,3 +102,4 @@ jobs:
           if [ ! -f "dist/plugin_package.zip" ]; then
             echo "Build failed: plugin_package.zip not found"
             exit 1
+          fi
