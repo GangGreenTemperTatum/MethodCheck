@@ -283,23 +283,16 @@ async function checkRequest(sdk: SDK, requestId: string): Promise<string> {
     const result = await processRequest(sdk, requestId);
 
     if (result) {
-      if (sdk.toast) {
-        sdk.toast.success(`Found methods: ${result}`);
-      }
+      sdk.console.log(`[MethodCheck] Manual check successful, found methods: ${result}`);
       return result;
     } else {
-      if (sdk.toast) {
-        sdk.toast.info('No additional methods found');
-      }
+      sdk.console.log(`[MethodCheck] Manual check completed, no additional methods found`);
       return "";
     }
   } catch (error) {
     sdk.console.error(`[MethodCheck] Error in manual check: ${error}`);
     if (error instanceof Error) {
       sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
-    }
-    if (sdk.toast) {
-      sdk.toast.error('Failed to check methods');
     }
     return "";
   }
