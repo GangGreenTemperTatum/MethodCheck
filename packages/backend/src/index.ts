@@ -251,10 +251,7 @@ This could indicate expanded functionality or potential security issues if unexp
         // Continue execution even if finding creation fails
       }
 
-      // Set comment and tag
-      const comment = `Allows additional methods: ${methodsString}`;
-      await sdk.requests.setComment(requestId, comment);
-      await sdk.requests.setTag(requestId, 'method-check');
+      sdk.console.log(`[MethodCheck] Request ${requestId} allows methods: ${methodsString}`);
 
       return methodsString;
     } else {
