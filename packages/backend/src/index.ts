@@ -5,6 +5,8 @@ import { RequestSpec } from "caido:utils";
 const processedRequests = new Set<string>();
 // Track the latest request ID we've seen
 let lastRequestId: string | null = null;
+// Store the cursor from the last query for pagination
+let lastCursor: string | null = null;
 
 // Simple URL parser function to extract host and path
 function parseUrl(sdk: SDK, url: string): { host: string, path: string } {
@@ -136,14 +138,25 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
 // Function to actively poll for new requests
 async function pollForRequests(sdk: SDK): Promise<void> {
   try {
-    sdk.console.log(`[MethodCheck] Polling for requests, last ID: ${lastRequestId || 'none'}`);
+    // Build the query, using the last cursor if available
+    let query = sdk.requests.query().descending("req", "id");
 
-    // Query for the latest requests
-    const query = sdk.requests.query().descending("req", "id").first(10);
+    if (lastCursor) {
+      query = query.after(lastCursor);
+    }
+
+    // Limit the number of requests to process in one batch
+    query = query.first(50);
+
     const results = await query.execute();
 
     if (results.items.length === 0) {
       return;
+    }
+
+    // Store the cursor for the next query
+    if (results.pageInfo.endCursor) {
+      lastCursor = results.pageInfo.endCursor;
     }
 
     // Process requests in reverse order (oldest to newest)
@@ -151,11 +164,6 @@ async function pollForRequests(sdk: SDK): Promise<void> {
       const item = results.items[i];
       const request = item.request;
       const id = request.getId();
-
-      // Skip if we've already seen this request or it's older than our last processed
-      if (lastRequestId && id <= lastRequestId) {
-        continue;
-      }
 
       // Update the last request ID we've seen
       lastRequestId = id;
