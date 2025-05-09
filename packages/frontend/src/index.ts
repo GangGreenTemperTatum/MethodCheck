@@ -4,11 +4,19 @@ import App from './views/App.vue';
 
 export type CaidoSDK = SDK<API, BackendEvents>;
 
+// Define event type interface to match backend event
+interface MethodCheckEvent {
+  requestId: string;
+  url: string;
+  originalMethod: string;
+  availableMethods: string[];
+}
+
 export function init(sdk: CaidoSDK) {
   console.log("[MethodCheck] Frontend initializing...");
 
   // Listen for method check events from backend
-  sdk.backend.onEvent("method-check-result", (data) => {
+  sdk.backend.onEvent("method-check-result", (data: MethodCheckEvent) => {
     console.log(`[MethodCheck] Found methods for ${data.url}: ${data.availableMethods.join(', ')}`);
   });
 

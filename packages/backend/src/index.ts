@@ -103,13 +103,13 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     // Parse Allow header
     if (allowHeader.length > 0) {
       const methods = allowHeader[0].split(/,\s*/);
-      methods.forEach(method => allowedMethods.add(method.trim().toUpperCase()));
+      methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
     }
 
     // Parse CORS methods header
     if (corsMethodsHeader.length > 0) {
       const methods = corsMethodsHeader[0].split(/,\s*/);
-      methods.forEach(method => allowedMethods.add(method.trim().toUpperCase()));
+      methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
     }
 
     // Filter out the current method
@@ -382,7 +382,7 @@ export function init(sdk: SDK<API, BackendEvents>) {
 
   // Listen for proxy responses
   try {
-    sdk.events.onInterceptResponse(async (sdk, request, response) => {
+    sdk.events.onInterceptResponse(async (sdk: SDK, request: any, response: any) => {
       try {
         const requestId = request.getId();
 
