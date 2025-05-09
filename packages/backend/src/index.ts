@@ -234,20 +234,17 @@ async function processRequest(sdk: SDK, requestId: string): Promise<string> {
     sdk.console.log(`[MethodCheck] Checking methods for request ${requestId}`);
     const allowedMethods = await checkMethods(sdk, url, method);
 
-  // If we found alternative methods, create a finding
-  if (allowedMethods.length > 0) {
-    const methodsString = allowedMethods.join(', ');
-    sdk.console.log(`[MethodCheck] Found additional methods for ${url}: ${methodsString}`);
+    // If we found alternative methods, create a finding
+    if (allowedMethods.length > 0) {
+      const methodsString = allowedMethods.join(', ');
+      sdk.console.log(`[MethodCheck] Found additional methods for ${url}: ${methodsString}`);
 
-    try {
-      // Check if findings API is available
-      if (sdk.findings && typeof sdk.findings.create === 'function') {
+      try {
         // Create a unique key based on the URL and original method
         const dedupeKey = `methodcheck-${host}-${path}-${method}`;
 
         // Check if a finding already exists
-        const existingFinding = typeof sdk.findings.exists === 'function' ?
-          await sdk.findings.exists(dedupeKey) : false;
+        const existingFinding = await sdk.findings.exists(dedupeKey);
 
         if (!existingFinding) {
           sdk.console.log(`[MethodCheck] Creating new finding for ${url}`);
@@ -257,14 +254,14 @@ async function processRequest(sdk: SDK, requestId: string): Promise<string> {
             title: `Alternative HTTP Methods Available: ${methodsString}`,
             description: `The endpoint at ${url} was accessed using ${method},  but also supports these methods: ${methodsString}.
 
-  This could indicate expanded functionality or potential security issues if  unexpected methods are accessible.
+This could indicate expanded functionality or potential security issues if  unexpected methods are accessible.
 
-  **Details**:
-  - Original request: ${method} ${url}
-  - Original request ID: ${requestId}
-  - Host: ${host}
-  - Path: ${path}
-  - Additional methods: ${methodsString}`,
+**Details**:
+- Original request: ${method} ${url}
+- Original request ID: ${requestId}
+- Host: ${host}
+- Path: ${path}
+- Additional methods: ${methodsString}`,
             reporter: "MethodCheck Plugin",
             dedupeKey: dedupeKey,
             request: request
@@ -274,34 +271,27 @@ async function processRequest(sdk: SDK, requestId: string): Promise<string> {
         } else {
           sdk.console.log(`[MethodCheck] Finding already exists for ${url}, skipping creation`);
         }
-      } else {
-        sdk.console.warn(`[MethodCheck] Cannot create finding - findings API not available`);
+      } catch (error) {
+        sdk.console.error(`[MethodCheck] Error creating finding: ${error}`);
+        if (error instanceof Error) {
+          sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
+        }
+        // Continue execution even if finding creation fails
       }
 
-      // Try setting comment and tag if available (keeping for backwards  compatibility)
-      if (typeof sdk.requests.setComment === 'function') {
-        const comment = `Allows additional methods: ${methodsString}`;
-        sdk.console.log(`[MethodCheck] Setting comment for request ${requestId}:  "${comment}"`);
-        await sdk.requests.setComment(requestId, comment);
-      }
+      // Set comment and tag
+      const comment = `Allows additional methods: ${methodsString}`;
+      sdk.console.log(`[MethodCheck] Setting comment for request ${requestId}:  "${comment}"`);
+      await sdk.requests.setComment(requestId, comment);
 
-      if (typeof sdk.requests.setTag === 'function') {
-        sdk.console.log(`[MethodCheck] Tagging request ${requestId} with  'method-check'`);
-        await sdk.requests.setTag(requestId, 'method-check');
-      }
-    } catch (error) {
-      sdk.console.error(`[MethodCheck] Error creating finding: ${error}`);
-      if (error instanceof Error) {
-        sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
-      }
-      // Continue execution even if finding creation fails
+      sdk.console.log(`[MethodCheck] Tagging request ${requestId} with  'method-check'`);
+      await sdk.requests.setTag(requestId, 'method-check');
+
+      return methodsString;
+    } else {
+      sdk.console.log(`[MethodCheck] No additional methods found for ${url}`);
+      return "";
     }
-
-    return methodsString;
-  } else {
-    sdk.console.log(`[MethodCheck] No additional methods found for ${url}`);
-    return "";
-  }
 
   } catch (error) {
     sdk.console.error(`[MethodCheck] Error processing request: ${error}`);
@@ -367,23 +357,22 @@ async function createTestFinding(sdk: SDK): Promise<void> {
   try {
     sdk.console.log("[MethodCheck] Attempting to create a test finding...");
 
-    if (sdk.findings && typeof sdk.findings.create === 'function') {
-      const testDedupeKey = `methodcheck-test-finding-${Date.now()}`;
+    const testDedupeKey = `methodcheck-test-finding-${Date.now()}`;
 
-      // First, get a real request to use as a reference
-      const query = sdk.requests.query().first(1);
-      const results = await query.execute();
+    // First, get a real request to use as a reference
+    const query = sdk.requests.query().first(1);
+    const results = await query.execute();
 
-      if (results.items.length === 0) {
-        sdk.console.log("[MethodCheck] No requests available to use for test finding");
-        return;
-      }
+    if (results.items.length === 0) {
+      sdk.console.log("[MethodCheck] No requests available to use for test finding");
+      return;
+    }
 
-      const sampleRequest = results.items[0].request;
+    const sampleRequest = results.items[0].request;
 
-      await sdk.findings.create({
-        title: "TEST FINDING - MethodCheck Plugin Test",
-        description: `This is a TEST FINDING created to verify the Findings API functionality.
+    await sdk.findings.create({
+      title: "TEST FINDING - MethodCheck Plugin Test",
+      description: `This is a TEST FINDING created to verify the Findings API functionality.
 
 **Test Details**:
 - Creation time: ${new Date().toISOString()}
@@ -392,15 +381,12 @@ async function createTestFinding(sdk: SDK): Promise<void> {
 - Status: This is not a real finding and can be safely deleted
 
 If you see this, it means the findings API is working correctly!`,
-        reporter: "MethodCheck Plugin [TEST MODE]",
-        dedupeKey: testDedupeKey,
-        request: sampleRequest // Use a real request as reference
-      });
+      reporter: "MethodCheck Plugin [TEST MODE]",
+      dedupeKey: testDedupeKey,
+      request: sampleRequest // Use a real request as reference
+    });
 
-      sdk.console.log("[MethodCheck] Successfully created test finding with key: " + testDedupeKey);
-    } else {
-      sdk.console.warn("[MethodCheck] Cannot create test finding - findings API not available");
-    }
+    sdk.console.log("[MethodCheck] Successfully created test finding with key: " + testDedupeKey);
   } catch (error) {
     sdk.console.error(`[MethodCheck] Error creating test finding: ${error}`);
     if (error instanceof Error) {
@@ -422,67 +408,52 @@ export function init(sdk: SDK<API>) {
   const features = Object.keys(sdk);
   sdk.console.log(`[MethodCheck] Available SDK features: ${features.join(", ") || "none"}`);
 
-  if (features.length === 0) {
-    sdk.console.warn("[MethodCheck] No SDK features detected - plugin will have limited functionality");
-  }
-
   // Register the API
   sdk.api.register("checkRequest", checkRequest);
   sdk.console.log("[MethodCheck] Registered API method: checkRequest");
 
-  // Check if proxy object exists before using it
-  if (sdk.proxy) {
-    sdk.console.log("[MethodCheck] Proxy feature available, registering listener");
-
-    // Listen for proxy responses
-    try {
-      sdk.proxy.on('response', async (event) => {
-        try {
-          const requestId = event.request.getId();
-          sdk.console.log(`[MethodCheck] Received proxy response event for request ${requestId}`);
-          await processRequest(sdk, requestId);
-        } catch (error) {
-          sdk.console.error(`[MethodCheck] Error in proxy response handler: ${error}`);
-          if (error instanceof Error) {
-            sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
-          }
+  // Listen for proxy responses
+  try {
+    sdk.proxy.on('response', async (event) => {
+      try {
+        const requestId = event.request.getId();
+        sdk.console.log(`[MethodCheck] Received proxy response event for request ${requestId}`);
+        await processRequest(sdk, requestId);
+      } catch (error) {
+        sdk.console.error(`[MethodCheck] Error in proxy response handler: ${error}`);
+        if (error instanceof Error) {
+          sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
         }
-      });
-      sdk.console.log("[MethodCheck] Proxy response listener registered");
-    } catch (error) {
-      sdk.console.error(`[MethodCheck] Failed to register proxy listener: ${error}`);
-      if (error instanceof Error) {
-        sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
       }
+    });
+    sdk.console.log("[MethodCheck] Proxy response listener registered");
+  } catch (error) {
+    sdk.console.error(`[MethodCheck] Failed to register proxy listener: ${error}`);
+    if (error instanceof Error) {
+      sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
     }
-  } else {
-    sdk.console.warn("[MethodCheck] Proxy feature not available - automatic event-based checking disabled");
-    sdk.console.log("[MethodCheck] Falling back to polling-based checking");
 
-    // Start polling for requests since we can't hook into the proxy events
+    // Fall back to polling if we couldn't register the proxy listener
+    sdk.console.log("[MethodCheck] Falling back to polling-based checking");
     startPolling(sdk);
   }
 
   // Register the command for manual checking
-  if (sdk.commands) {
-    try {
-      sdk.commands.register('methodcheck.check', async (context) => {
-        if (context.type === 'request' && context.id) {
-          sdk.console.log(`[MethodCheck] Command executed for request: ${context.id}`);
-          await checkRequest(sdk, context.id);
-        } else {
-          sdk.console.error(`[MethodCheck] Invalid context: ${JSON.stringify(context)}`);
-        }
-      });
-      sdk.console.log("[MethodCheck] Command registered for manual checks");
-    } catch (error) {
-      sdk.console.error(`[MethodCheck] Failed to register command: ${error}`);
-      if (error instanceof Error) {
-        sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
+  try {
+    sdk.commands.register('methodcheck.check', async (context) => {
+      if (context.type === 'request' && context.id) {
+        sdk.console.log(`[MethodCheck] Command executed for request: ${context.id}`);
+        await checkRequest(sdk, context.id);
+      } else {
+        sdk.console.error(`[MethodCheck] Invalid context: ${JSON.stringify(context)}`);
       }
+    });
+    sdk.console.log("[MethodCheck] Command registered for manual checks");
+  } catch (error) {
+    sdk.console.error(`[MethodCheck] Failed to register command: ${error}`);
+    if (error instanceof Error) {
+      sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
     }
-  } else {
-    sdk.console.warn("[MethodCheck] Commands feature not available - manual checking disabled");
   }
 
   sdk.console.log("[MethodCheck] Creating a test finding to verify API functionality");
