@@ -28,6 +28,9 @@ jobs:
   build:
     name: Build Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -51,6 +54,48 @@ jobs:
 
       - name: Run build
         run: pnpm build
+
+      - name: Type check
+        id: typecheck
+        continue-on-error: true
+        run: |
+          echo "::warning::Running TypeScript type checking in warning-only mode"
+          if pnpm -r typecheck > typecheck_output.txt 2>&1; then
+            echo "has_errors=false" >> $GITHUB_OUTPUT
+            echo "errors=" >> $GITHUB_OUTPUT
+          else
+            grep -v "node_modules" typecheck_output.txt > our_errors.txt || true
+            if [ -s our_errors.txt ]; then
+              echo "has_errors=true" >> $GITHUB_OUTPUT
+              echo "errors<<EOF" >> $GITHUB_OUTPUT
+              cat our_errors.txt >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "has_errors=dependency" >> $GITHUB_OUTPUT
+              echo "errors=" >> $GITHUB_OUTPUT
+            fi
+            echo "::warning::Type check found issues but continuing workflow"
+          fi
+
+      - name: Create comment for code issues
+        if: ${{ github.event_name == 'pull_request' && steps.typecheck.outputs.has_errors == 'true' }}
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 #4.0.0
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ⚠️ TypeScript Type Check Warnings
+
+            The build succeeded, but TypeScript found type issues in your code that should be addressed:
+
+            ```
+            ${{ steps.typecheck.outputs.errors }}
+            ```
+
+            These warnings won't block the PR from being merged, but fixing them is recommended.
+          reactions: |
+            warning
+            eyes
+            sob
 
       - name: Verify build artifacts
         run: |

@@ -7,8 +7,8 @@ export type CaidoSDK = SDK<API>;
 export function init(sdk: CaidoSDK) {
   console.log("[MethodCheck] Frontend initializing...");
 
-  try {
-    // Register our plugin's view
+  // Register our plugin's view
+  if (sdk.view) {
     sdk.view.register({
       id: 'methodcheck',
       component: App,
@@ -16,12 +16,12 @@ export function init(sdk: CaidoSDK) {
       title: 'Method Check',
     });
     console.log("[MethodCheck] View registered");
-  } catch (error) {
-    console.error("[MethodCheck] Error registering view:", error);
+  } else {
+    console.warn("[MethodCheck] View API not available");
   }
 
-  try {
-    // Register a context menu item for HTTP requests
+  // Register a context menu item for HTTP requests
+  if (sdk.menu) {
     sdk.menu.registerItem({
       type: 'RequestRow',
       commandId: 'methodcheck.check',
@@ -29,12 +29,12 @@ export function init(sdk: CaidoSDK) {
       leadingIcon: 'fas fa-exchange-alt',
     });
     console.log("[MethodCheck] Menu item registered");
-  } catch (error) {
-    console.error("[MethodCheck] Error registering menu item:", error);
+  } else {
+    console.warn("[MethodCheck] Menu API not available");
   }
 
-  try {
-    // Register HTTPQL extension for finding requests with alternative methods
+  // Register HTTPQL extension for finding requests with alternative methods
+  if (sdk.httpql) {
     sdk.httpql.extendMetadata({
       tags: [
         {
@@ -46,8 +46,8 @@ export function init(sdk: CaidoSDK) {
       ],
     });
     console.log("[MethodCheck] HTTPQL metadata extended");
-  } catch (error) {
-    console.error("[MethodCheck] Error extending HTTPQL metadata:", error);
+  } else {
+    console.warn("[MethodCheck] HTTPQL API not available");
   }
 
   console.log("[MethodCheck] Frontend initialized successfully!");
