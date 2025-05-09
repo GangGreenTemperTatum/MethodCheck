@@ -7,6 +7,8 @@ const processedRequests = new Set<string>();
 let lastRequestId: string | null = null;
 // Store the cursor from the last query for pagination
 let lastCursor: string | null = null;
+// Store the interval ID for polling
+let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
 
 // Simple URL parser function to extract host and path
 function parseUrl(sdk: SDK, url: string): { host: string, path: string } {
@@ -305,13 +307,45 @@ async function checkRequest(sdk: SDK, requestId: string): Promise<string> {
 
 // Function to start the periodic polling
 async function startPolling(sdk: SDK): Promise<void> {
+  // Only start polling if it's not already running
+  if (pollingIntervalId !== null) {
+    sdk.console.log(`[MethodCheck] Polling already active, not starting again`);
+    return;
+  }
+
   // Poll immediately, then every 5 seconds
   await pollForRequests(sdk);
 
   // Continue polling at regular intervals
-  setInterval(async () => {
+  pollingIntervalId = setInterval(async () => {
     await pollForRequests(sdk);
   }, 5000);
+
+  sdk.console.log(`[MethodCheck] Polling started with interval ID: ${pollingIntervalId}`);
+}
+
+// Function to stop the periodic polling
+function stopPolling(sdk: SDK): boolean {
+  if (pollingIntervalId === null) {
+    sdk.console.log(`[MethodCheck] No active polling to stop`);
+    return false;
+  }
+
+  clearInterval(pollingIntervalId);
+  pollingIntervalId = null;
+  sdk.console.log(`[MethodCheck] Polling stopped`);
+  return true;
+}
+
+// Function to toggle polling state
+function togglePolling(sdk: SDK): boolean {
+  if (pollingIntervalId === null) {
+    startPolling(sdk);
+    return true; // Polling is now active
+  } else {
+    stopPolling(sdk);
+    return false; // Polling is now inactive
+  }
 }
 
 // Function to create a test finding
@@ -355,12 +389,16 @@ If you see this, it means the findings API is working correctly!`,
 // Export the API type
 export type API = DefineAPI<{
   checkRequest: typeof checkRequest;
+  togglePolling: typeof togglePolling;
+  isPollingActive: () => boolean;
 }>;
 
 // Initialize the plugin
 export function init(sdk: SDK<API>) {
   // Register the API
   sdk.api.register("checkRequest", checkRequest);
+  sdk.api.register("togglePolling", () => togglePolling(sdk));
+  sdk.api.register("isPollingActive", () => pollingIntervalId !== null);
 
   // Listen for proxy responses
   try {
@@ -408,20 +446,6 @@ export function init(sdk: SDK<API>) {
 
     // Fall back to polling if we couldn't register the proxy listener
     startPolling(sdk);
-  }
-
-  // Register the command for manual checking
-  try {
-    sdk.commands.register('methodcheck.check', async (context) => {
-      if (context.type === 'request' && context.id) {
-        await checkRequest(sdk, context.id);
-      }
-    });
-  } catch (error) {
-    sdk.console.error(`[MethodCheck] Failed to register command: ${error}`);
-    if (error instanceof Error) {
-      sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
-    }
   }
 
   createTestFinding(sdk);
