@@ -1,5 +1,18 @@
-import { SDK, DefineAPI } from "caido:plugin";
+import { SDK, DefineAPI, DefineEvents } from "caido:plugin";
 import { RequestSpec } from "caido:utils";
+
+// Define event types
+type MethodCheckEvent = {
+  requestId: string;
+  url: string;
+  originalMethod: string;
+  availableMethods: string[];
+};
+
+// Define events for backend to frontend communication
+export type BackendEvents = DefineEvents<{
+  "method-check-result": (data: MethodCheckEvent) => void;
+}>;
 
 // Store for processed requests to avoid duplicates
 const processedRequests = new Set<string>();
@@ -222,6 +235,14 @@ This could indicate expanded functionality or potential security issues if unexp
           dedupeKey: dedupeKey,
           request: request
         });
+
+        // Send event to frontend
+        sdk.api.send("method-check-result", {
+          requestId,
+          url,
+          originalMethod: method,
+          availableMethods: allowedMethods
+        });
       } catch (error) {
         sdk.console.error(`[MethodCheck] Error creating finding: ${error}`);
         if (error instanceof Error) {
@@ -356,7 +377,7 @@ export type API = DefineAPI<{
 }>;
 
 // Initialize the plugin
-export function init(sdk: SDK<API>) {
+export function init(sdk: SDK<API, BackendEvents>) {
   // Register the API
   sdk.api.register("checkRequest", checkRequest);
   sdk.api.register("togglePolling", () => togglePolling(sdk));
