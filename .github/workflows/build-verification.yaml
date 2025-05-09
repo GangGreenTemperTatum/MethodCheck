@@ -53,10 +53,38 @@ jobs:
         run: pnpm build
 
       - name: Type check
+        id: typecheck
         continue-on-error: true
         run: |
           echo "::warning::Running TypeScript type checking in warning-only mode"
-          pnpm -r typecheck || echo "::warning::Type check found issues but continuing workflow"
+          pnpm -r typecheck > typecheck_output.txt 2>&1 || {
+            echo "errors<<EOF" >> $GITHUB_OUTPUT
+            cat typecheck_output.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "::warning::Type check found issues but continuing workflow"
+            exit 1
+          }
+          echo "errors=" >> $GITHUB_OUTPUT
+
+      - name: Create comment
+        if: ${{ failure() && steps.typecheck.outcome == 'failure' }}
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 #4.0.0
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## ⚠️ TypeScript Type Check Warnings
+
+            The build succeeded, but TypeScript found type issues that should be addressed:
+
+            ```
+            ${{ steps.typecheck.outputs.errors }}
+            ```
+
+            These warnings won't block the PR from being merged, but fixing them is recommended.
+          reactions: |
+            warning
+            eyes
+            sob
 
       - name: Verify build artifacts
         run: |
