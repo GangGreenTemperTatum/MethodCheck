@@ -1,9 +1,9 @@
 ---
 name: "Labeler"
 on:
-  pull_request_target:
-    branches: ["main"]
-    types: ["opened", "synchronize"]
+  #pull_request_target:
+  #  branches: ["main"]
+  #  types: ["opened", "synchronize"]
 
 permissions:
   actions: read
