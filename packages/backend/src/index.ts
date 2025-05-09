@@ -385,10 +385,9 @@ export function init(sdk: SDK<API, BackendEvents>) {
 
   // Listen for proxy responses
   try {
-    sdk.proxy.on('response', async (event) => {
+    sdk.events.onInterceptResponse(async (sdk, request, response) => {
       try {
-        const requestId = event.request.getId();
-        const request = event.request;
+        const requestId = request.getId();
 
         // Skip OPTIONS requests to avoid recursion
         if (request.getMethod() === 'OPTIONS') {
@@ -415,19 +414,19 @@ export function init(sdk: SDK<API, BackendEvents>) {
         // Process the request
         await processRequest(sdk, requestId);
       } catch (error) {
-        sdk.console.error(`[MethodCheck] Error in proxy response handler: ${error}`);
+        sdk.console.error(`[MethodCheck] Error in response interceptor: ${error}`);
         if (error instanceof Error) {
           sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
         }
       }
     });
   } catch (error) {
-    sdk.console.error(`[MethodCheck] Failed to register proxy listener: ${error}`);
+    sdk.console.error(`[MethodCheck] Failed to register response interceptor: ${error}`);
     if (error instanceof Error) {
       sdk.console.error(`[MethodCheck] Error stack: ${error.stack}`);
     }
 
-    // Fall back to polling if we couldn't register the proxy listener
+    // Fall back to polling if we couldn't register the response interceptor
     startPolling(sdk);
   }
 
