@@ -12,8 +12,6 @@ let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
 
 // Simple URL parser function to extract host and path
 function parseUrl(sdk: SDK, url: string): { host: string, path: string } {
-  sdk.console.log(`[MethodCheck] Parsing URL: ${url}`);
-
   try {
     // Extract host - look for double slash and then the next slash or colon
     let host = '';
@@ -53,7 +51,6 @@ function parseUrl(sdk: SDK, url: string): { host: string, path: string } {
       }
     }
 
-    sdk.console.log(`[MethodCheck] Parsed URL - Host: ${host}, Path: ${path}`);
     return { host, path };
   } catch (error) {
     sdk.console.error(`[MethodCheck] Error parsing URL: ${error}`);
@@ -63,10 +60,7 @@ function parseUrl(sdk: SDK, url: string): { host: string, path: string } {
 
 // Function to check methods for a given URL
 async function checkMethods(sdk: SDK, url: string, originalMethod: string): Promise<string[]> {
-  sdk.console.log(`[MethodCheck] Checking methods for URL: ${url} (original method: ${originalMethod})`);
-
   try {
-    // Use our custom URL parser instead of the URL class
     const parsedUrl = parseUrl(sdk, url);
     const optionsSpec = new RequestSpec(url);
 
@@ -78,13 +72,7 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     optionsSpec.setHeader('Host', parsedUrl.host);
 
     // Send the OPTIONS request
-    sdk.console.log(`[MethodCheck] Sending OPTIONS request...`);
     const sentRequest = await sdk.requests.send(optionsSpec);
-
-    // Log the sent request ID
-    const sentRequestId = sentRequest.request.getId();
-    sdk.console.log(`[MethodCheck] OPTIONS request sent with ID: ${sentRequestId}`);
-
     const optionsResponse = sentRequest.response;
 
     if (!optionsResponse) {
@@ -95,15 +83,6 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     // Check for Allow header or Access-Control-Allow-Methods header
     const allowHeader = optionsResponse.getHeader('Allow') || [];
     const corsMethodsHeader = optionsResponse.getHeader('Access-Control-Allow-Methods') || [];
-
-    // Log the headers only if they contain useful information
-    if (allowHeader.length > 0) {
-      sdk.console.log(`[MethodCheck] Found Allow header: ${allowHeader[0]}`);
-    }
-
-    if (corsMethodsHeader.length > 0) {
-      sdk.console.log(`[MethodCheck] Found Access-Control-Allow-Methods header: ${corsMethodsHeader[0]}`);
-    }
 
     // Combine and parse available methods
     const allowedMethods = new Set<string>();
@@ -124,10 +103,7 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     allowedMethods.delete(originalMethod.toUpperCase());
     allowedMethods.delete('OPTIONS'); // OPTIONS is expected for CORS preflight
 
-    const result = Array.from(allowedMethods);
-    sdk.console.log(`[MethodCheck] Found ${result.length} additional methods: ${JSON.stringify(result)}`);
-
-    return result;
+    return Array.from(allowedMethods);
   } catch (error) {
     sdk.console.error(`[MethodCheck] Error checking methods: ${error}`);
     if (error instanceof Error) {
@@ -283,10 +259,8 @@ async function checkRequest(sdk: SDK, requestId: string): Promise<string> {
     const result = await processRequest(sdk, requestId);
 
     if (result) {
-      sdk.console.log(`[MethodCheck] Manual check successful, found methods: ${result}`);
       return result;
     } else {
-      sdk.console.log(`[MethodCheck] Manual check completed, no additional methods found`);
       return "";
     }
   } catch (error) {
@@ -302,7 +276,6 @@ async function checkRequest(sdk: SDK, requestId: string): Promise<string> {
 async function startPolling(sdk: SDK): Promise<void> {
   // Only start polling if it's not already running
   if (pollingIntervalId !== null) {
-    sdk.console.log(`[MethodCheck] Polling already active, not starting again`);
     return;
   }
 
@@ -313,20 +286,16 @@ async function startPolling(sdk: SDK): Promise<void> {
   pollingIntervalId = setInterval(async () => {
     await pollForRequests(sdk);
   }, 5000);
-
-  sdk.console.log(`[MethodCheck] Polling started with interval ID: ${pollingIntervalId}`);
 }
 
 // Function to stop the periodic polling
 function stopPolling(sdk: SDK): boolean {
   if (pollingIntervalId === null) {
-    sdk.console.log(`[MethodCheck] No active polling to stop`);
     return false;
   }
 
   clearInterval(pollingIntervalId);
   pollingIntervalId = null;
-  sdk.console.log(`[MethodCheck] Polling stopped`);
   return true;
 }
 
