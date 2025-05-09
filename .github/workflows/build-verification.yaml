@@ -52,6 +52,9 @@ jobs:
       - name: Run build
         run: pnpm build
 
+      - name: Type check
+        run: pnpm -r typecheck
+
       - name: Verify build artifacts
         run: |
           if [ ! -f "dist/plugin_package.zip" ]; then
