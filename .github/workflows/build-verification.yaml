@@ -57,17 +57,19 @@ jobs:
         continue-on-error: true
         run: |
           echo "::warning::Running TypeScript type checking in warning-only mode"
-          pnpm -r typecheck > typecheck_output.txt 2>&1 || {
+          if pnpm -r typecheck > typecheck_output.txt 2>&1; then
+            echo "has_errors=false" >> $GITHUB_OUTPUT
+            echo "errors=" >> $GITHUB_OUTPUT
+          else
+            echo "has_errors=true" >> $GITHUB_OUTPUT
             echo "errors<<EOF" >> $GITHUB_OUTPUT
             cat typecheck_output.txt >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
             echo "::warning::Type check found issues but continuing workflow"
-            exit 1
-          }
-          echo "errors=" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create comment
-        if: ${{ failure() && steps.typecheck.outcome == 'failure' }}
+        if: ${{ github.event_name == 'pull_request' && steps.typecheck.outputs.has_errors == 'true' }}
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 #4.0.0
         with:
           issue-number: ${{ github.event.pull_request.number }}
