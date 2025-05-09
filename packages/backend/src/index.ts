@@ -210,6 +210,15 @@ async function processRequest(sdk: SDK, requestId: string): Promise<string> {
       return "";
     }
 
+    // Create a unique key based on the URL and original method
+    const dedupeKey = `methodcheck-${host}-${path}-${method}`;
+
+    // Check if a finding already exists using the direct API
+    const existingFinding = await sdk.findings.exists(dedupeKey);
+    if (existingFinding) {
+      return "";
+    }
+
     // Check for allowed methods
     const allowedMethods = await checkMethods(sdk, url, method);
 
@@ -218,19 +227,12 @@ async function processRequest(sdk: SDK, requestId: string): Promise<string> {
       const methodsString = allowedMethods.join(', ');
 
       try {
-        // Create a unique key based on the URL and original method
-        const dedupeKey = `methodcheck-${host}-${path}-${method}`;
+        // Create a new finding
+        await sdk.findings.create({
+          title: `Alternative HTTP Methods Available: ${methodsString}`,
+          description: `The endpoint at ${url} was accessed using ${method}, but also supports these methods: ${methodsString}.
 
-        // Check if a finding already exists
-        const existingFinding = await sdk.findings.exists(dedupeKey);
-
-        if (!existingFinding) {
-          // Create a new finding
-          await sdk.findings.create({
-            title: `Alternative HTTP Methods Available: ${methodsString}`,
-            description: `The endpoint at ${url} was accessed using ${method},  but also supports these methods: ${methodsString}.
-
-This could indicate expanded functionality or potential security issues if  unexpected methods are accessible.
+This could indicate expanded functionality or potential security issues if unexpected methods are accessible.
 
 **Details**:
 - Original request: ${method} ${url}
@@ -238,11 +240,10 @@ This could indicate expanded functionality or potential security issues if  unex
 - Host: ${host}
 - Path: ${path}
 - Additional methods: ${methodsString}`,
-            reporter: "MethodCheck Plugin",
-            dedupeKey: dedupeKey,
-            request: request
-          });
-        }
+          reporter: "MethodCheck Plugin",
+          dedupeKey: dedupeKey,
+          request: request
+        });
       } catch (error) {
         sdk.console.error(`[MethodCheck] Error creating finding: ${error}`);
         if (error instanceof Error) {
@@ -366,6 +367,31 @@ export function init(sdk: SDK<API>) {
     sdk.proxy.on('response', async (event) => {
       try {
         const requestId = event.request.getId();
+        const request = event.request;
+
+        // Skip OPTIONS requests to avoid recursion
+        if (request.getMethod() === 'OPTIONS') {
+          return;
+        }
+
+        // Check if we've already processed this request
+        if (processedRequests.has(requestId)) {
+          return;
+        }
+
+        // Check if we already have a finding for this request
+        const host = request.getHost();
+        const path = request.getPath();
+        const method = request.getMethod();
+        const dedupeKey = `methodcheck-${host}-${path}-${method}`;
+
+        // Skip if a finding already exists
+        const existingFinding = await sdk.findings.exists(dedupeKey);
+        if (existingFinding) {
+          return;
+        }
+
+        // Process the request
         await processRequest(sdk, requestId);
       } catch (error) {
         sdk.console.error(`[MethodCheck] Error in proxy response handler: ${error}`);
