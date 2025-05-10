@@ -16,7 +16,7 @@
   "pre-commit": {
     "enabled": true
   },
-  "enabledManagers": ["npm", "github-actions", "pip_requirements"],
+  "enabledManagers": ["npm", "github-actions"],
   "timezone": "America/New_York",
   "schedule": ["before 4am"],
   "labels": ["dependency"],
@@ -63,13 +63,6 @@
       "automergeType": "pr"
     }
   ],
-  "includePaths": [
-    "tests/**",
-    "tests/flask-options-app/**"
-  ],
-  "pip_requirements": {
-    "fileMatch": ["(^|/)([\\w-])*requirements.*\\.txt$"]
-  },
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"]
