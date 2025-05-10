@@ -97,6 +97,7 @@ MethodCheck is designed to work seamlessly in the background, automatically chec
 >
 > ```bash
 > tail -f <path_to_log_file>
+> IE: tail -f ~/Library/Application\ Support/io.caido.Caido/logs/logging.2025-05-10.log
 > ```
 
 ```bash
