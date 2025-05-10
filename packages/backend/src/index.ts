@@ -97,18 +97,24 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     const allowHeader = optionsResponse.getHeader('Allow') || [];
     const corsMethodsHeader = optionsResponse.getHeader('Access-Control-Allow-Methods') || [];
 
+    // Log the headers for debugging
+    sdk.console.log(`[MethodCheck] Allow header: ${JSON.stringify(allowHeader)}`);
+    sdk.console.log(`[MethodCheck] CORS Methods header: ${JSON.stringify(corsMethodsHeader)}`);
+
     // Combine and parse available methods
     const allowedMethods = new Set<string>();
 
     // Parse Allow header
     if (allowHeader.length > 0) {
       const methods = allowHeader[0].split(/,\s*/);
+      sdk.console.log(`[MethodCheck] Parsed Allow methods: ${JSON.stringify(methods)}`);
       methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
     }
 
     // Parse CORS methods header
     if (corsMethodsHeader.length > 0) {
       const methods = corsMethodsHeader[0].split(/,\s*/);
+      sdk.console.log(`[MethodCheck] Parsed CORS methods: ${JSON.stringify(methods)}`);
       methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
     }
 
@@ -116,7 +122,10 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     allowedMethods.delete(originalMethod.toUpperCase());
     allowedMethods.delete('OPTIONS'); // OPTIONS is expected for CORS preflight
 
-    return Array.from(allowedMethods);
+    const result = Array.from(allowedMethods);
+    sdk.console.log(`[MethodCheck] Final allowed methods (after filtering): ${JSON.stringify(result)}`);
+
+    return result;
   } catch (error) {
     sdk.console.error(`[MethodCheck] Error checking methods: ${error}`);
     if (error instanceof Error) {
@@ -385,9 +394,10 @@ export function init(sdk: SDK<API, BackendEvents>) {
     sdk.events.onInterceptResponse(async (sdk: SDK, request: any, response: any) => {
       try {
         const requestId = request.getId();
+        const requestMethod = request.getMethod();
 
         // Skip OPTIONS requests to avoid recursion
-        if (request.getMethod() === 'OPTIONS') {
+        if (requestMethod === 'OPTIONS') {
           return;
         }
 
@@ -396,20 +406,70 @@ export function init(sdk: SDK<API, BackendEvents>) {
           return;
         }
 
-        // Check if we already have a finding for this request
-        const host = request.getHost();
-        const path = request.getPath();
-        const method = request.getMethod();
-        const dedupeKey = `methodcheck-${host}-${path}-${method}`;
+        // Check if this response has an Allow header - we can use it directly
+        const allowHeader = response.getHeader('Allow') || [];
 
-        // Skip if a finding already exists
-        const existingFinding = await sdk.findings.exists(dedupeKey);
-        if (existingFinding) {
-          return;
+        if (allowHeader.length > 0) {
+          sdk.console.log(`[MethodCheck] Direct response with Allow header: ${JSON.stringify(allowHeader)}`);
+
+          const url = request.getUrl();
+          const host = request.getHost();
+          const path = request.getPath();
+          const dedupeKey = `methodcheck-${host}-${path}-${requestMethod}`;
+
+          // Skip if a finding already exists
+          const existingFinding = await sdk.findings.exists(dedupeKey);
+          if (existingFinding) {
+            return;
+          }
+
+          // Parse methods from the header
+          const allowedMethods = new Set<string>();
+          const methods = allowHeader[0].split(/,\s*/);
+          methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
+
+          // Filter out the current method and OPTIONS
+          allowedMethods.delete(requestMethod.toUpperCase());
+          allowedMethods.delete('OPTIONS');
+
+          const availableMethods = Array.from(allowedMethods);
+
+          if (availableMethods.length > 0) {
+            const methodsString = availableMethods.join(', ');
+
+            // Create a finding
+            await sdk.findings.create({
+              title: `Alternative HTTP Methods Available: ${methodsString}`,
+              description: `The endpoint at ${url} was accessed using ${requestMethod}, but also supports these methods: ${methodsString}.
+
+This could indicate expanded functionality or potential security issues if unexpected methods are accessible.
+
+**Details**:
+- Original request: ${requestMethod} ${url}
+- Original request ID: ${requestId}
+- Host: ${host}
+- Path: ${path}
+- Additional methods: ${methodsString}
+- Source: Allow header in direct response`,
+              reporter: "MethodCheck Plugin",
+              dedupeKey: dedupeKey,
+              request: request
+            });
+
+            // Send event to frontend
+            sdk.api.send("method-check-result", {
+              requestId,
+              url,
+              originalMethod: requestMethod,
+              availableMethods: availableMethods
+            });
+
+            sdk.console.log(`[MethodCheck] Created finding from direct response: ${methodsString}`);
+          }
+        } else {
+          // If no Allow header in the response, use the normal processing path
+          await processRequest(sdk, requestId);
         }
-
-        // Process the request
-        await processRequest(sdk, requestId);
       } catch (error) {
         sdk.console.error(`[MethodCheck] Error in response interceptor: ${error}`);
         if (error instanceof Error) {
