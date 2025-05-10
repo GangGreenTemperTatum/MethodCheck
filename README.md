@@ -47,7 +47,7 @@ __This is a similar approach to one of my go to BAPPs, '[HTTP Methods Discloser]
 
 When an HTTP request passes through Caido's proxy (not limited to in-scope), the plugin:
 
-- Checks if the request has already been processed (to avoid duplicates)
+- Checks if the request has already been processed (to avoid duplicates) - This has been commented out for now and is easily adjustable - see the [Code Snippet](https://github.com/GangGreenTemperTatum/MethodCheck/blob/90d41ab02c70d3ba785039aadd29349349b4c597/packages/backend/src/index.ts#L213-L222) section below for more details.
 - Skips `OPTIONS requests` (to avoid recursive checks)
 - Sends an `OPTIONS` request to the same URL
 - Examines both `Allow` and `Access-Control-Allow-Methods` headers in the response
@@ -97,6 +97,7 @@ MethodCheck is designed to work seamlessly in the background, automatically chec
 >
 > ```bash
 > tail -f <path_to_log_file>
+> IE: tail -f ~/Library/Application\ Support/io.caido.Caido/logs/logging.2025-05-10.log
 > ```
 
 ```bash

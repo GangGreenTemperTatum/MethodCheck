@@ -20,6 +20,8 @@ build/
 
 # Declaration files
 *.d.ts
+!src/caido-fixes.d.ts
+!packages/*/src/caido-fixes.d.ts
 
 # Source maps
 *.js.map
