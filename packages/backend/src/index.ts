@@ -118,8 +118,17 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
       methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
     }
 
-    // Filter out the current method
-    allowedMethods.delete(originalMethod.toUpperCase());
+    // For testing, we'll keep all methods even the current one
+    const originalUppercase = originalMethod.toUpperCase();
+
+    // Just for debugging
+    sdk.console.log(`[MethodCheck] All methods before filtering: ${JSON.stringify(Array.from(allowedMethods))}`);
+
+    // Filter out the current method and OPTIONS (standard behavior)
+    // But only if we have more than 1 method after removing OPTIONS
+    if (allowedMethods.size > 2 || !allowedMethods.has(originalUppercase)) {
+      allowedMethods.delete(originalUppercase);
+    }
     allowedMethods.delete('OPTIONS'); // OPTIONS is expected for CORS preflight
 
     const result = Array.from(allowedMethods);
@@ -184,7 +193,7 @@ async function pollForRequests(sdk: SDK): Promise<void> {
 // Function to process a request
 async function processRequest(sdk: SDK, requestId: string): Promise<string> {
   try {
-    // Skip if we've already processed this request
+    // Still avoid processing the same request ID twice in a session
     if (processedRequests.has(requestId)) {
       return "";
     }
@@ -210,14 +219,19 @@ async function processRequest(sdk: SDK, requestId: string): Promise<string> {
       return "";
     }
 
-    // Create a unique key based on the URL and original method
-    const dedupeKey = `methodcheck-${host}-${path}-${method}`;
+    // Create a unique key based on URL, method, and timestamp so it's always unique
+    const dedupeKey = `methodcheck-${host}-${path}-${method}-${Date.now()}`; // Modified for unique findings
 
-    // Check if a finding already exists using the direct API
-    const existingFinding = await sdk.findings.exists(dedupeKey);
-    if (existingFinding) {
+    // Original de-duplication check (commented out for testing)
+    /*
+    // Use our own tracking instead of findings.exists
+    if (processedRequests.has(dedupeKey)) {
       return "";
     }
+
+    // Mark this endpoint as processed
+    processedRequests.add(dedupeKey);
+    */
 
     // Check for allowed methods
     const allowedMethods = await checkMethods(sdk, url, method);
@@ -246,12 +260,17 @@ This could indicate expanded functionality or potential security issues if unexp
         });
 
         // Send event to frontend
-        sdk.api.send("method-check-result", {
-          requestId,
-          url,
-          originalMethod: method,
-          availableMethods: allowedMethods
-        });
+        try {
+          sdk.api.send("method-check-result", {
+            requestId,
+            url,
+            originalMethod: method,
+            availableMethods: allowedMethods
+          });
+        } catch (error) {
+          sdk.console.error(`[MethodCheck] Error sending event to frontend: ${error}`);
+          // Continue even if event sending fails
+        }
       } catch (error) {
         sdk.console.error(`[MethodCheck] Error creating finding: ${error}`);
         if (error instanceof Error) {
@@ -384,6 +403,9 @@ export type API = DefineAPI<{
 
 // Initialize the plugin
 export function init(sdk: SDK<API, BackendEvents>) {
+  // Add debug log at startup
+  sdk.console.log("[MethodCheck] Plugin initializing...");
+
   // Register the API
   sdk.api.register("checkRequest", checkRequest);
   sdk.api.register("togglePolling", () => togglePolling(sdk));
@@ -393,54 +415,75 @@ export function init(sdk: SDK<API, BackendEvents>) {
   try {
     sdk.events.onInterceptResponse(async (sdk: SDK, request: any, response: any) => {
       try {
-        const requestId = request.getId();
-        const requestMethod = request.getMethod();
+        // Wrap all API calls in try/catch to prevent crashes
+        try {
+          const requestId = request.getId();
+          const requestMethod = request.getMethod();
 
-        // Skip OPTIONS requests to avoid recursion
-        if (requestMethod === 'OPTIONS') {
-          return;
-        }
-
-        // Check if we've already processed this request
-        if (processedRequests.has(requestId)) {
-          return;
-        }
-
-        // Check if this response has an Allow header - we can use it directly
-        const allowHeader = response.getHeader('Allow') || [];
-
-        if (allowHeader.length > 0) {
-          sdk.console.log(`[MethodCheck] Direct response with Allow header: ${JSON.stringify(allowHeader)}`);
-
-          const url = request.getUrl();
-          const host = request.getHost();
-          const path = request.getPath();
-          const dedupeKey = `methodcheck-${host}-${path}-${requestMethod}`;
-
-          // Skip if a finding already exists
-          const existingFinding = await sdk.findings.exists(dedupeKey);
-          if (existingFinding) {
+          // Skip OPTIONS requests to avoid recursion
+          if (requestMethod === 'OPTIONS') {
             return;
           }
 
-          // Parse methods from the header
-          const allowedMethods = new Set<string>();
-          const methods = allowHeader[0].split(/,\s*/);
-          methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
+          // Add more debug logging
+          sdk.console.log(`[MethodCheck] Processing response for request ${requestId} (${requestMethod})`);
 
-          // Filter out the current method and OPTIONS
-          allowedMethods.delete(requestMethod.toUpperCase());
-          allowedMethods.delete('OPTIONS');
+          // Check if this response has an Allow header - we can use it directly
+          const allowHeader = response.getHeader('Allow') || [];
 
-          const availableMethods = Array.from(allowedMethods);
+          if (allowHeader.length > 0) {
+            sdk.console.log(`[MethodCheck] Direct response with Allow header: ${JSON.stringify(allowHeader)}`);
 
-          if (availableMethods.length > 0) {
-            const methodsString = availableMethods.join(', ');
+            try {
+              const url = request.getUrl();
+              const host = request.getHost();
+              const path = request.getPath();
+              const dedupeKey = `methodcheck-${host}-${path}-${requestMethod}-${Date.now()}`; // Add timestamp to make unique
 
-            // Create a finding
-            await sdk.findings.create({
-              title: `Alternative HTTP Methods Available: ${methodsString}`,
-              description: `The endpoint at ${url} was accessed using ${requestMethod}, but also supports these methods: ${methodsString}.
+              // Check each function call individually to identify the problem
+              sdk.console.log(`[MethodCheck] URL: ${url}, Host: ${host}, Path: ${path}`);
+
+              // REMOVED duplicate check - always process for testing purposes
+
+              // Parse methods from the header
+              const allowedMethods = new Set<string>();
+              if (typeof allowHeader[0] === 'string') {
+                const methods = allowHeader[0].split(/,\s*/);
+
+                // Log all methods before any filtering
+                sdk.console.log(`[MethodCheck] All methods from header before filtering: ${JSON.stringify(methods)}`);
+
+                methods.forEach((method: string) => {
+                  if (typeof method === 'string') {
+                    allowedMethods.add(method.trim().toUpperCase());
+                  }
+                });
+              }
+
+              // For testing, we'll keep all methods even the current one
+              const originalUppercase = requestMethod.toUpperCase();
+
+              // Log all methods after parsing but before filtering
+              sdk.console.log(`[MethodCheck] All parsed methods: ${JSON.stringify(Array.from(allowedMethods))}`);
+
+              // Filter out the current method and OPTIONS
+              // But only if we have more than 1 method after removing OPTIONS
+              if (allowedMethods.size > 2 || !allowedMethods.has(originalUppercase)) {
+                allowedMethods.delete(originalUppercase);
+              }
+              allowedMethods.delete('OPTIONS');
+
+              const availableMethods = Array.from(allowedMethods);
+              sdk.console.log(`[MethodCheck] Available methods: ${JSON.stringify(availableMethods)}`);
+
+              if (availableMethods.length > 0) {
+                const methodsString = availableMethods.join(', ');
+
+                // Create a finding - wrap in separate try/catch
+                try {
+                  await sdk.findings.create({
+                    title: `Alternative HTTP Methods Available: ${methodsString}`,
+                    description: `The endpoint at ${url} was accessed using ${requestMethod}, but also supports these methods: ${methodsString}.
 
 This could indicate expanded functionality or potential security issues if unexpected methods are accessible.
 
@@ -450,25 +493,30 @@ This could indicate expanded functionality or potential security issues if unexp
 - Host: ${host}
 - Path: ${path}
 - Additional methods: ${methodsString}
-- Source: Allow header in direct response`,
-              reporter: "MethodCheck Plugin",
-              dedupeKey: dedupeKey,
-              request: request
-            });
-
-            // Send event to frontend
-            sdk.api.send("method-check-result", {
-              requestId,
-              url,
-              originalMethod: requestMethod,
-              availableMethods: availableMethods
-            });
-
-            sdk.console.log(`[MethodCheck] Created finding from direct response: ${methodsString}`);
+- Source: Allow header in direct response
+- Time: ${new Date().toISOString()}`,
+                    reporter: "MethodCheck Plugin",
+                    dedupeKey: dedupeKey,
+                    request: request
+                  });
+                  sdk.console.log(`[MethodCheck] Successfully created finding`);
+                } catch (findingError) {
+                  sdk.console.error(`[MethodCheck] Error creating finding: ${findingError}`);
+                }
+              }
+            } catch (innerError) {
+              sdk.console.error(`[MethodCheck] Error processing Allow header: ${innerError}`);
+              if (innerError instanceof Error) {
+                sdk.console.error(`[MethodCheck] Error stack: ${innerError.stack}`);
+              }
+            }
+          } else {
+            // For processRequest, also fix filtering there
+            await processRequest(sdk, requestId);
           }
-        } else {
-          // If no Allow header in the response, use the normal processing path
-          await processRequest(sdk, requestId);
+        } catch (error) {
+          sdk.console.error(`[MethodCheck] Error accessing request properties: ${error}`);
+          return;
         }
       } catch (error) {
         sdk.console.error(`[MethodCheck] Error in response interceptor: ${error}`);
