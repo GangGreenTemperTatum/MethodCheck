@@ -89,3 +89,17 @@ release_notes.md
 # Development files
 
 dev/
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+*.whl
+*.py[cod]
+.venv/
+*.env
+*.venv/
