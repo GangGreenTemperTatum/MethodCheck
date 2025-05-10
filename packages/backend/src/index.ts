@@ -97,32 +97,23 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     const allowHeader = optionsResponse.getHeader('Allow') || [];
     const corsMethodsHeader = optionsResponse.getHeader('Access-Control-Allow-Methods') || [];
 
-    // Log the headers for debugging
-    sdk.console.log(`[MethodCheck] Allow header: ${JSON.stringify(allowHeader)}`);
-    sdk.console.log(`[MethodCheck] CORS Methods header: ${JSON.stringify(corsMethodsHeader)}`);
-
     // Combine and parse available methods
     const allowedMethods = new Set<string>();
 
     // Parse Allow header
     if (allowHeader.length > 0) {
       const methods = allowHeader[0].split(/,\s*/);
-      sdk.console.log(`[MethodCheck] Parsed Allow methods: ${JSON.stringify(methods)}`);
       methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
     }
 
     // Parse CORS methods header
     if (corsMethodsHeader.length > 0) {
       const methods = corsMethodsHeader[0].split(/,\s*/);
-      sdk.console.log(`[MethodCheck] Parsed CORS methods: ${JSON.stringify(methods)}`);
       methods.forEach((method: string) => allowedMethods.add(method.trim().toUpperCase()));
     }
 
     // For testing, we'll keep all methods even the current one
     const originalUppercase = originalMethod.toUpperCase();
-
-    // Just for debugging
-    sdk.console.log(`[MethodCheck] All methods before filtering: ${JSON.stringify(Array.from(allowedMethods))}`);
 
     // Filter out the current method and OPTIONS (standard behavior)
     // But only if we have more than 1 method after removing OPTIONS
@@ -131,10 +122,7 @@ async function checkMethods(sdk: SDK, url: string, originalMethod: string): Prom
     }
     allowedMethods.delete('OPTIONS'); // OPTIONS is expected for CORS preflight
 
-    const result = Array.from(allowedMethods);
-    sdk.console.log(`[MethodCheck] Final allowed methods (after filtering): ${JSON.stringify(result)}`);
-
-    return result;
+    return Array.from(allowedMethods);
   } catch (error) {
     sdk.console.error(`[MethodCheck] Error checking methods: ${error}`);
     if (error instanceof Error) {
@@ -279,8 +267,6 @@ This could indicate expanded functionality or potential security issues if unexp
         // Continue execution even if finding creation fails
       }
 
-      sdk.console.log(`[MethodCheck] Request ${requestId} allows methods: ${methodsString}`);
-
       return methodsString;
     } else {
       return "";
@@ -415,75 +401,55 @@ export function init(sdk: SDK<API, BackendEvents>) {
   try {
     sdk.events.onInterceptResponse(async (sdk: SDK, request: any, response: any) => {
       try {
-        // Wrap all API calls in try/catch to prevent crashes
-        try {
-          const requestId = request.getId();
-          const requestMethod = request.getMethod();
+        const requestId = request.getId();
+        const requestMethod = request.getMethod();
 
-          // Skip OPTIONS requests to avoid recursion
-          if (requestMethod === 'OPTIONS') {
-            return;
-          }
+        // Skip OPTIONS requests to avoid recursion
+        if (requestMethod === 'OPTIONS') {
+          return;
+        }
 
-          // Add more debug logging
-          sdk.console.log(`[MethodCheck] Processing response for request ${requestId} (${requestMethod})`);
+        // Check if this response has an Allow header - we can use it directly
+        const allowHeader = response.getHeader('Allow') || [];
 
-          // Check if this response has an Allow header - we can use it directly
-          const allowHeader = response.getHeader('Allow') || [];
+        if (allowHeader.length > 0) {
+          try {
+            const url = request.getUrl();
+            const host = request.getHost();
+            const path = request.getPath();
+            const dedupeKey = `methodcheck-${host}-${path}-${requestMethod}-${Date.now()}`; // Add timestamp to make unique
 
-          if (allowHeader.length > 0) {
-            sdk.console.log(`[MethodCheck] Direct response with Allow header: ${JSON.stringify(allowHeader)}`);
+            // Parse methods from the header
+            const allowedMethods = new Set<string>();
+            if (typeof allowHeader[0] === 'string') {
+              const methods = allowHeader[0].split(/,\s*/);
+              methods.forEach((method: string) => {
+                if (typeof method === 'string') {
+                  allowedMethods.add(method.trim().toUpperCase());
+                }
+              });
+            }
 
-            try {
-              const url = request.getUrl();
-              const host = request.getHost();
-              const path = request.getPath();
-              const dedupeKey = `methodcheck-${host}-${path}-${requestMethod}-${Date.now()}`; // Add timestamp to make unique
+            // For testing, we'll keep all methods even the current one
+            const originalUppercase = requestMethod.toUpperCase();
 
-              // Check each function call individually to identify the problem
-              sdk.console.log(`[MethodCheck] URL: ${url}, Host: ${host}, Path: ${path}`);
+            // Filter out the current method and OPTIONS
+            // But only if we have more than 1 method after removing OPTIONS
+            if (allowedMethods.size > 2 || !allowedMethods.has(originalUppercase)) {
+              allowedMethods.delete(originalUppercase);
+            }
+            allowedMethods.delete('OPTIONS');
 
-              // REMOVED duplicate check - always process for testing purposes
+            const availableMethods = Array.from(allowedMethods);
 
-              // Parse methods from the header
-              const allowedMethods = new Set<string>();
-              if (typeof allowHeader[0] === 'string') {
-                const methods = allowHeader[0].split(/,\s*/);
+            if (availableMethods.length > 0) {
+              const methodsString = availableMethods.join(', ');
 
-                // Log all methods before any filtering
-                sdk.console.log(`[MethodCheck] All methods from header before filtering: ${JSON.stringify(methods)}`);
-
-                methods.forEach((method: string) => {
-                  if (typeof method === 'string') {
-                    allowedMethods.add(method.trim().toUpperCase());
-                  }
-                });
-              }
-
-              // For testing, we'll keep all methods even the current one
-              const originalUppercase = requestMethod.toUpperCase();
-
-              // Log all methods after parsing but before filtering
-              sdk.console.log(`[MethodCheck] All parsed methods: ${JSON.stringify(Array.from(allowedMethods))}`);
-
-              // Filter out the current method and OPTIONS
-              // But only if we have more than 1 method after removing OPTIONS
-              if (allowedMethods.size > 2 || !allowedMethods.has(originalUppercase)) {
-                allowedMethods.delete(originalUppercase);
-              }
-              allowedMethods.delete('OPTIONS');
-
-              const availableMethods = Array.from(allowedMethods);
-              sdk.console.log(`[MethodCheck] Available methods: ${JSON.stringify(availableMethods)}`);
-
-              if (availableMethods.length > 0) {
-                const methodsString = availableMethods.join(', ');
-
-                // Create a finding - wrap in separate try/catch
-                try {
-                  await sdk.findings.create({
-                    title: `Alternative HTTP Methods Available: ${methodsString}`,
-                    description: `The endpoint at ${url} was accessed using ${requestMethod}, but also supports these methods: ${methodsString}.
+              // Create a finding - wrap in separate try/catch
+              try {
+                await sdk.findings.create({
+                  title: `Alternative HTTP Methods Available: ${methodsString}`,
+                  description: `The endpoint at ${url} was accessed using ${requestMethod}, but also supports these methods: ${methodsString}.
 
 This could indicate expanded functionality or potential security issues if unexpected methods are accessible.
 
@@ -495,28 +461,24 @@ This could indicate expanded functionality or potential security issues if unexp
 - Additional methods: ${methodsString}
 - Source: Allow header in direct response
 - Time: ${new Date().toISOString()}`,
-                    reporter: "MethodCheck Plugin",
-                    dedupeKey: dedupeKey,
-                    request: request
-                  });
-                  sdk.console.log(`[MethodCheck] Successfully created finding`);
-                } catch (findingError) {
-                  sdk.console.error(`[MethodCheck] Error creating finding: ${findingError}`);
-                }
-              }
-            } catch (innerError) {
-              sdk.console.error(`[MethodCheck] Error processing Allow header: ${innerError}`);
-              if (innerError instanceof Error) {
-                sdk.console.error(`[MethodCheck] Error stack: ${innerError.stack}`);
+                  reporter: "MethodCheck Plugin",
+                  dedupeKey: dedupeKey,
+                  request: request
+                });
+                sdk.console.log(`[MethodCheck] Found alternative methods for ${url}: ${methodsString}`);
+              } catch (findingError) {
+                sdk.console.error(`[MethodCheck] Error creating finding: ${findingError}`);
               }
             }
-          } else {
-            // For processRequest, also fix filtering there
-            await processRequest(sdk, requestId);
+          } catch (innerError) {
+            sdk.console.error(`[MethodCheck] Error processing Allow header: ${innerError}`);
+            if (innerError instanceof Error) {
+              sdk.console.error(`[MethodCheck] Error stack: ${innerError.stack}`);
+            }
           }
-        } catch (error) {
-          sdk.console.error(`[MethodCheck] Error accessing request properties: ${error}`);
-          return;
+        } else {
+          // For processRequest, also fix filtering there
+          await processRequest(sdk, requestId);
         }
       } catch (error) {
         sdk.console.error(`[MethodCheck] Error in response interceptor: ${error}`);
@@ -536,4 +498,5 @@ This could indicate expanded functionality or potential security issues if unexp
   }
 
   createTestFinding(sdk);
+  sdk.console.log("[MethodCheck] Plugin initialized successfully!");
 }
