@@ -42,6 +42,25 @@
     {
       "matchPackagePatterns": ["eslint"],
       "groupName": "eslint packages"
+    },
+    {
+      "matchManagers": ["poetry", "pip_requirements"],
+      "matchPackagePatterns": ["^pytest"],
+      "groupName": "pytest packages",
+      "groupSlug": "pytest",
+      "separateMinorPatch": true
+    },
+    {
+      "matchManagers": ["poetry", "pip_requirements"],
+      "matchDepTypes": ["python"],
+      "allowedVersions": "^3.8",
+      "enabled": true
+    },
+    {
+      "description": "Auto merge non-major updates",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
     }
   ],
   "vulnerabilityAlerts": {
