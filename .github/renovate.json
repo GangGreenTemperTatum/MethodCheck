@@ -16,7 +16,7 @@
   "pre-commit": {
     "enabled": true
   },
-  "enabledManagers": ["npm", "github-actions"],
+  "enabledManagers": ["npm", "github-actions", "pip_requirements"],
   "timezone": "America/New_York",
   "schedule": ["before 4am"],
   "labels": ["dependency"],
