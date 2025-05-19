@@ -21,7 +21,11 @@
   "enabledManagers": [
     "npm",
     "github-actions",
-    "pip_requirements"
+    "pip_requirements",
+    "poetry",
+    "pep621",
+    "setup-cfg",
+    "dockerfile"
   ],
   "timezone": "America/New_York",
   "schedule": [
@@ -31,13 +35,6 @@
     "dependency"
   ],
   "packageRules": [
-    {
-      "groupName": "Caido packages",
-      "automerge": false,
-      "matchPackageNames": [
-        "/^@caido//"
-      ]
-    },
     {
       "matchUpdateTypes": [
         "patch"
@@ -54,13 +51,13 @@
     {
       "groupName": "typescript-types",
       "matchPackageNames": [
-        "/^@types//"
+        "^@types/"
       ]
     },
     {
       "groupName": "eslint packages",
       "matchPackageNames": [
-        "/eslint/"
+        "eslint"
       ]
     },
     {
@@ -72,7 +69,7 @@
       "groupSlug": "pytest",
       "separateMinorPatch": true,
       "matchPackageNames": [
-        "/^pytest/"
+        "^pytest"
       ]
     },
     {
@@ -101,5 +98,6 @@
     "labels": [
       "security"
     ]
-  }
+  },
+  "lockFileMaintenance": { "enabled": true }
 }
