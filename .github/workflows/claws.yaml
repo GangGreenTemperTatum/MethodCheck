@@ -34,6 +34,20 @@ jobs:
         run: |
           #!/bin/bash
 
+          # Find the path to the claws-scan executable
+          CLAWS_PATH=$(gem which claws-scan | sed 's|lib/claws-scan.rb|bin/claws-scan|')
+
+          if [[ ! -f "$CLAWS_PATH" ]]; then
+            echo "Could not find claws-scan executable"
+            CLAWS_PATH=$(find $(gem environment gemdir) -name claws-scan -type f -executable | head -n 1)
+            if [[ -z "$CLAWS_PATH" ]]; then
+              echo "Still could not find claws-scan executable"
+              exit 1
+            fi
+          fi
+
+          echo "Using claws-scan at: $CLAWS_PATH"
+
           # Collect all files in the .github/workflows directory except this file
           workflow_files=$(find .github/workflows -type f -not -name "claws.yaml")
 
@@ -52,4 +66,4 @@ jobs:
           done <<< "$workflow_files"
 
           # Run claws-scan with all gathered flags
-          claws-scan -f github -c /tmp/claws-config.yml "${flags[@]}"
+          "$CLAWS_PATH" -f github -c /tmp/claws-config.yml "${flags[@]}"
