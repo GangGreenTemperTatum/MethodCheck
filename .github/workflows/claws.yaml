@@ -17,7 +17,9 @@ jobs:
           ruby-version: "3.0"
       - name: Set Up Claws Config
         run: |
-          echo ... > /tmp/claws-config.yml
+          echo "---" > /tmp/claws-config.yml
+          echo "config:" >> /tmp/claws-config.yml
+          echo "  # Default configurations" >> /tmp/claws-config.yml
       - name: Set Up Shellcheck
         run: |
           sudo apt-get update
@@ -32,8 +34,8 @@ jobs:
         run: |
           #!/bin/bash
 
-          # Collect all files in the .github/workflows directory
-          workflow_files=$(find .github/workflows -type f)
+          # Collect all files in the .github/workflows directory except this file
+          workflow_files=$(find .github/workflows -type f -not -name "claws.yaml")
 
           # Exit early if there are no workflow files
           if [[ -z "$workflow_files" ]]; then
@@ -49,5 +51,5 @@ jobs:
             flags+=("-t" "$file")
           done <<< "$workflow_files"
 
-          # Run the analyze command with all gathered flags
-          analyze -f github -c /tmp/claws-config.yml "${flags[@]}"
+          # Run claws-scan with all gathered flags
+          claws-scan -f github -c /tmp/claws-config.yml "${flags[@]}"
