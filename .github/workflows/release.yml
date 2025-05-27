@@ -55,5 +55,5 @@ jobs:
         with:
           tag: ${{ steps.meta.outputs.version }}
           commit: ${{ github.sha }}
-          body: "Release ${{ steps.meta.outputs.version }}"
-          artifacts: "dist/plugin_package.zip,dist/plugin_package.zip.sig"
+          body: 'Release ${{ steps.meta.outputs.version }}'
+          artifacts: 'dist/plugin_package.zip,dist/plugin_package.zip.sig'
