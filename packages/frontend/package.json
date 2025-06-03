@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@caido/primevue": "0.1.13",
-    "primevue": "4.3.4",
+    "primevue": "4.3.5",
     "vue": "3.5.16"
   },
   "devDependencies": {
