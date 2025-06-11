@@ -6,7 +6,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@caido/primevue": "0.1.13",
+    "@caido/primevue": "0.1.14",
     "primevue": "4.3.5",
     "vue": "3.5.16"
   },
