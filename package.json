@@ -13,7 +13,7 @@
     "@tailwindcss/postcss": "^4.1.5",
     "@vitejs/plugin-vue": "5.2.4",
     "postcss-prefixwrap": "1.55.0",
-    "tailwindcss": "4.1.8",
+    "tailwindcss": "4.1.10",
     "tailwindcss-primeui": "0.6.1",
     "typescript": "5.8.3"
   }
