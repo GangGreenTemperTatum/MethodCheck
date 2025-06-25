@@ -50,13 +50,13 @@
     },
     {
       "groupName": "typescript-types",
-      "matchPackageNames": [
+      "matchPackagePatterns": [
         "^@types/"
       ]
     },
     {
       "groupName": "eslint packages",
-      "matchPackageNames": [
+      "matchPackagePatterns": [
         "eslint"
       ]
     },
@@ -68,7 +68,7 @@
       "groupName": "pytest packages",
       "groupSlug": "pytest",
       "separateMinorPatch": true,
-      "matchPackageNames": [
+      "matchPackagePatterns": [
         "^pytest"
       ]
     },
@@ -82,6 +82,36 @@
       ],
       "allowedVersions": "^3.8",
       "enabled": true
+    },
+    {
+      "description": "Auto merge lint and formatting tools",
+      "matchManagers": ["npm"],
+      "matchPackagePatterns": [
+        "lint",
+        "prettier",
+        "eslint",
+        "@typescript-eslint/",
+        "stylelint",
+        "jshint",
+        "tslint"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Auto merge npm minor and patch updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "description": "Auto merge GitHub Actions minor updates",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr"
     },
     {
       "description": "Auto merge non-major updates",
