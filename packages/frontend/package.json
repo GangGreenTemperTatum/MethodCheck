@@ -13,7 +13,7 @@
   "devDependencies": {
     "@caido/sdk-backend": "^0.49.0",
     "@caido/sdk-frontend": "^0.49.0",
-    "@codemirror/view": "6.38.0",
+    "@codemirror/view": "6.38.1",
     "backend": "workspace:*",
     "vue-tsc": "3.0.1"
   }
